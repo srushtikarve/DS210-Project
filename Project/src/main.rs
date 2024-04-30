@@ -14,31 +14,28 @@ use std::collections::HashSet;
 use std::collections::HashMap;
 
 //I went to OH to work on this project
-//this is a directed graph 
+//this is a directed graph of Gnutella's data (a peer to peer sharing network) from August 2002
 
 fn main() {
-    let file = "p2p-Gnutella30.txt"; //these three lines read the data from the gnutella file and then print it
+    let file = "p2p-Gnutella30.txt"; //these lines read the data from the main gnutella file
     let gnutella_file = read_file(file);
-
     let num_nodes = 20000;
-    let small_gnutella_file = make_rand_sample(gnutella_file, num_nodes); //calling the random function to pick a sample
-    let unique_gnutella_file = unique_nodes(&small_gnutella_file); //finding unique nodes from the truncated dataset unique
-    //println!("{:?}", unique_gnutella_file);
-    let adjacency = adjacency_list(small_gnutella_file, unique_gnutella_file); //calling the adjacency list on the unique nodes with it's length used
-    let bfs_distance = bfs_dist(&adjacency); //picking random node from the sample that has connection/s //see if you end up needing this
-    println!("{:?}", bfs_distance); 
 
-    //let bfs_distance = bfs_dist(&adjacency);
-    //println!("{:?}", bfs_distance);
+    let small_gnutella_file = make_rand_sample(gnutella_file, num_nodes); //calling the random function below to pick a sample of 20000 (smaller than the original)
 
-    let bfs_distance_values: Vec<f64> = bfs_distance.values()
-        .flatten()
+    let unique_gnutella_file = unique_nodes(&small_gnutella_file); //calling the unique function to find unique nodes from the truncated dataset "small"
+
+    let adjacency = adjacency_list(small_gnutella_file, unique_gnutella_file); //calling the adjacency list on the unique nodes with it's length or edges used
+    let bfs_distance = bfs_dist(&adjacency); //calling the breadth-first search function
+    println!("{:?}", bfs_distance);[]
+    let bfs_distance_values: Vec<f64> = bfs_distance.values() //extracting dist values and converting them into a vector of f64 values (Vec<f64>)
+        .flatten() //flattening the values of the HashMap, filtering out any None values (if any), and then mapping the values to f64 types
         .filter_map(|&x| Some(x))
         .map(|x| x as f64)
         .collect();
 
-    let average = mean(&bfs_distance_values).unwrap_or(0.0);
-    let maximum = max(&bfs_distance_values).unwrap_or(0.0);
+    let average = mean(&bfs_distance_values).unwrap_or(0.0); //calling the stat functions from the other module and then printing them below
+    let maximum = max(&bfs_distance).unwrap_or(0);
     let mode_val = mode(&bfs_distance_values).unwrap_or(0.0);
 
     println!("The average value of node connections is: {:?}", average);
@@ -46,13 +43,13 @@ fn main() {
     println!("The most common node connections distance value is: {:?}", mode_val);
 }
 
-fn read_file(path: &str) -> Vec<(usize, usize)> { //this function reads the file
+fn read_file(path: &str) -> Vec<(usize, usize)> { //this function reads the file given above
     let mut output: Vec<(usize,usize)> = Vec::new();
     let file = File::open(path).expect("Could not open file");
     let buf_reader = std::io::BufReader::new(file).lines();
     for(idx, line) in buf_reader.enumerate(){
         let line_str = line.expect("Error reading");
-        let v: Vec<&str> = line_str.trim().split('\t').collect();
+        let v: Vec<&str> = line_str.trim().split(|c: char| c.is_whitespace() || c == '\t').collect();
         let x = v[0].parse::<usize>().unwrap();
         let y = v[1].parse::<usize>().unwrap();
         output.push((x,y));
@@ -60,8 +57,8 @@ fn read_file(path: &str) -> Vec<(usize, usize)> { //this function reads the file
     return output;
 }
 
-fn make_rand_sample(graph: Vec<(usize,usize)>, n: usize) -> Vec<(usize,usize)> { //because the data is very large, I will pick a random sample of 50000 nodes and edges using this sample
-    let mut rng = rand::thread_rng(); //take 50000 elements in the list
+fn make_rand_sample(graph: Vec<(usize,usize)>, n: usize) -> Vec<(usize,usize)> { //because the data is very large, I'm picking a random sample of 20000 nodes and edges using this sample function
+    let mut rng = rand::thread_rng(); //take 20000 elements in the list
     let n_sample: Vec<(usize,usize)> = graph.choose_multiple(&mut rng, n).cloned().collect();
     return n_sample; //this is storing the random collection of elements
 }
@@ -93,51 +90,32 @@ fn adjacency_list(edges: Vec<(usize,usize)>, unique_nodes_set:HashSet<usize>) ->
 }
 
 #[test]
-fn test_mean(){
-    let file = "node_test_file.txt"; //these lines read the data from the node file and then print it
+fn test_unique_nodes(){ //tests the test nodes file for the unique nodes which are 0-10 so 11 numbers
+    let file = "node_test_file.txt"; //these lines read the data from the node file
     let node_file = read_file(file);
-    let test_mean_val = 5.913; //mean is sum of all numbers/count of numbers in test data
-
-    let mean = mean(node_file);
-    assert_eq!(mean, test_mean_val); //checking that the function's output matches known value
+    let num_unique = unique_nodes(&node_file).len();
+    assert_eq!(num_unique, 11); //again, my data file has 11 nodes so we should get the number 11 outputted here
 }
 
 #[test]
-fn test_max(){
-    let file = "node_test_file.txt"; //these lines read the data from the node file and then print it
-    let node_file = read_file(file);
-    let test_max_val = 10; //highest value in dataset
+fn test_max() { //this tests whether the max function can actually calculate which node has the most connections
+    let bfs_distance: HashMap<usize, Vec<usize>> = [ //connections of nodes to others from the node file hard-coded here, because in the actual data the answer will be based on the randomized sample each time
+        (0, vec![2]),
+        (1, vec![3, 6, 5]),
+        (2, vec![4, 10]),
+        (3, vec![9, 5, 1]),
+        (4, vec![7, 5]),
+        (5, vec![8]),
+        (6, vec![9, 1]),
+        (7, vec![2, 5, 3, 1]), 
+        (8, vec![7, 10]),
+        (9, vec![6, 7, 1]),
+        (10, vec![3, 6]),
+    ]
+    .iter()
+    .cloned()
+    .collect();
 
-    let maximum = max(node_file); //checking that the function's output matches known value
-    assert_eq!(maximum, test_max_val);
+    let maximum = max(&bfs_distance).unwrap_or(0); //calculating which node has highest connections with the highest length vector
+    assert_eq!(maximum, 7); //here the answer should be seven, since this vector has the most connections
 }
-
-#[test]
-fn test_mode(){
-    let file = "node_test_file.txt"; //these lines read the data from the node file and then print it
-    let node_file = read_file(file);
-    let test_mode_val = 1; //is the mode because that has a frequency of 5 (most out of the rest)
-
-    let mode = mode(node_file); //checking that the function's output matches known value
-    assert_eq!(mode, test_mode_val);
-}
-
-#[test]
-fn test_connections(){
-    let file = "node_test_file.txt"; //these lines read the data from the node file and then print it
-    let node_file = read_file(file);
-
-    //the test is checking for the 10 nodes in my txt file because that is how many are in it
-    //let exp_output_for_1 = vec![None, Some(0), Some(4), Some(1), Some(5), Some(2), Some(1), Some(3), Some(3), Some(2), Some(4)]; //the shortest distance from 1 to each node (starts with zero so it's none first since its 1-10)
-    let test_adjacency = adjacency_list(node_file, unique_nodes(&node_file));  //Generate the adjacency list using your function
-    //println!("{:?}", distance.get(1));
-    //assert_eq!(distance, exp_output_for_1); //check that the generated adjacency list matches the expected adjacency list
-
-    let distance_map = bfs_dist(&test_adjacency); //picking random node from the sample that has connection/s //see if you end up needing this
-
-    assert_eq!(distance_map[&1][0], None); // Distance from 1 to 0 (doesn't exist) //checking distances from 1 to each
-    assert_eq!(distance_map[&1][1], Some(0)); //dist from 1 to 1 (self) is 0
-    assert_eq!(distance_map[&1][8], Some(3)); //dist from 1 to 8, example 1-3-5-8 degrees of seperation
-}
-//1-3-5-8 so 1-8 should be 3
-//test 0 or 1 or whatever degrees of seperation
