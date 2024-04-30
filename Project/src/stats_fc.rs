@@ -10,7 +10,7 @@ pub fn mean(data: &[f64]) -> Option<f64> { //finds the average number of node co
     Some(sum / len as f64) //Calculates the mean and return it
 }
 
-pub fn max(data: &HashMap<usize, Vec<usize>>) -> Option<usize> { //finds the maximum number of node connections so we can know who's most popular
+pub fn max(data: &HashMap<usize, Vec<isize>>) -> Option<usize> { //finds the maximum number of node connections so we can know who's most popular
     if data.is_empty() {
         return None; //Return None if the input data is empty
     }
@@ -25,7 +25,6 @@ pub fn max(data: &HashMap<usize, Vec<usize>>) -> Option<usize> { //finds the max
             max_node = Some(node);
         }
     }
-
     max_node
 }
 

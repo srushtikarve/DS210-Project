@@ -22,20 +22,32 @@ fn main() {
     let num_nodes = 20000;
 
     let small_gnutella_file = make_rand_sample(gnutella_file, num_nodes); //calling the random function below to pick a sample of 20000 (smaller than the original)
-
     let unique_gnutella_file = unique_nodes(&small_gnutella_file); //calling the unique function to find unique nodes from the truncated dataset "small"
 
     let adjacency = adjacency_list(small_gnutella_file, unique_gnutella_file); //calling the adjacency list on the unique nodes with it's length or edges used
-    let bfs_distance = bfs_dist(&adjacency); //calling the breadth-first search function
-    println!("{:?}", bfs_distance);[]
-    let bfs_distance_values: Vec<f64> = bfs_distance.values() //extracting dist values and converting them into a vector of f64 values (Vec<f64>)
-        .flatten() //flattening the values of the HashMap, filtering out any None values (if any), and then mapping the values to f64 types
-        .filter_map(|&x| Some(x))
-        .map(|x| x as f64)
-        .collect();
 
+    let mut bfs_distance_map: HashMap<usize, Vec<isize>> = HashMap::new(); //hashmap to store distances
+
+    for i in 0..adjacency.len() { //loops over every node 
+        let bfs_result = bfs_dist(i, &adjacency); //calling the breadth-first search function for each node and storing into hash map
+        bfs_distance_map.insert(i, bfs_result);
+    }
+
+    for (node, distances) in &bfs_distance_map { //this prints out the breadth-first search degree connections for each node except
+        println!("Node {}: ", node);
+        for (other_node, distance) in distances.iter().enumerate() {
+            if *distance != -1 && *distance != 0 { // Exclude -1 and 0 distances
+                println!(" Node {} is {} away from Node {}", node, distance, other_node);
+            }
+        }
+    }
+
+    let bfs_distance_values: Vec<f64> = bfs_distance_map.values() //extracting dist values and converting them into a vector of f64 values (Vec<f64>)
+        .flatten() //flattening the values of the HashMap, filtering out any None values (if any), and then mapping the values to f64 types
+        .filter_map(|&x| if x != -1 { Some(x as f64) } else { None })
+        .collect();
     let average = mean(&bfs_distance_values).unwrap_or(0.0); //calling the stat functions from the other module and then printing them below
-    let maximum = max(&bfs_distance).unwrap_or(0);
+    let maximum = max(&bfs_distance_map).unwrap_or(0);
     let mode_val = mode(&bfs_distance_values).unwrap_or(0.0);
 
     println!("The average value of node connections is: {:?}", average);
@@ -83,8 +95,10 @@ fn adjacency_list(edges: Vec<(usize,usize)>, unique_nodes_set:HashSet<usize>) ->
     for (source, destination) in edges {
         graph_list[node_map[&source]].push(node_map[&destination]);
     }
-    for (vertex, neighbors) in graph_list.iter().enumerate() {
-        println!("Vertex {}: {:?}", vertex, neighbors);
+    for (vertex, neighbors) in graph_list.iter().enumerate() { 
+        if !neighbors.is_empty() { //doesn't print the empty distance nodes
+            println!("Vertex {}: {:?}", vertex, neighbors);
+        }
     }
     return graph_list;
 }
@@ -94,14 +108,14 @@ fn test_unique_nodes(){ //tests the test nodes file for the unique nodes which a
     let file = "node_test_file.txt"; //these lines read the data from the node file
     let node_file = read_file(file);
     let num_unique = unique_nodes(&node_file).len();
-    assert_eq!(num_unique, 11); //again, my data file has 11 nodes so we should get the number 11 outputted here
+    assert_eq!(num_unique, 11); //again, my data file has 11 nodes so 11 is outputted here
 }
 
 #[test]
 fn test_max() { //this tests whether the max function can actually calculate which node has the most connections
-    let bfs_distance: HashMap<usize, Vec<usize>> = [ //connections of nodes to others from the node file hard-coded here, because in the actual data the answer will be based on the randomized sample each time
+    let bfs_distance: HashMap<usize, Vec<isize>> = [ //connections (same as node file above) hard-coded here. In the actual data the answer will be based on the randomized sample each time
         (0, vec![2]),
-        (1, vec![3, 6, 5]),
+        (1, vec![3, 6]),
         (2, vec![4, 10]),
         (3, vec![9, 5, 1]),
         (4, vec![7, 5]),
@@ -119,3 +133,22 @@ fn test_max() { //this tests whether the max function can actually calculate whi
     let maximum = max(&bfs_distance).unwrap_or(0); //calculating which node has highest connections with the highest length vector
     assert_eq!(maximum, 7); //here the answer should be seven, since this vector has the most connections
 }
+
+#[test]
+fn test_bfs_dist() {
+    let bfs_distance: Vec<Vec<usize>> = vec![ //connections of nodes hard-coded here. In the actual data the answer will be based on the randomized sample each time
+        vec![3, 1],
+        vec![2],
+        vec![],
+        vec![4],
+        vec![2],
+    ];
+
+    println!("{:?}",bfs_distance);
+
+    let distance_map = bfs_dist(0, &bfs_distance);
+
+    let distance_0_to_node_2 = distance_map[2];
+
+    assert_eq!(distance_0_to_node_2, 2); //assert that the shortest distance from node 0 to 2 is 2
+}  
